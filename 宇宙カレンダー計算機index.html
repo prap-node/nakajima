@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宇宙カレンダー計算機</title>
+<style>
+  :root{
+    --ink:#eaf0ff; --sub:#9aa7c7; --accent:#7aa2ff; --accent2:#c08bff;
+    --line:rgba(150,170,255,.16); --panel:rgba(20,26,54,.55); --chip:rgba(120,150,255,.10);
+    --glow:0 0 24px rgba(122,162,255,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0; min-height:100%;}
+  body{
+    color:var(--ink); position:relative; overflow-x:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",
+      "Yu Gothic",Meiryo,sans-serif; line-height:1.6;
+    background:
+      radial-gradient(1200px 700px at 78% -5%, rgba(192,139,255,.22), transparent 60%),
+      radial-gradient(1000px 800px at 12% 8%, rgba(80,140,255,.20), transparent 55%),
+      radial-gradient(900px 900px at 50% 120%, rgba(60,200,220,.14), transparent 60%),
+      linear-gradient(180deg, #05060f 0%, #080a1c 45%, #04060f 100%);
+    background-attachment:fixed;
+  }
+  /* 星空 */
+  #stars,#stars2,#stars3{position:fixed; inset:0; pointer-events:none; z-index:0;}
+  #stars{background-image:radial-gradient(1px 1px at 20% 30%,#fff,transparent),
+    radial-gradient(1px 1px at 70% 60%,#fff,transparent),
+    radial-gradient(1px 1px at 40% 80%,#cfe0ff,transparent),
+    radial-gradient(1px 1px at 90% 20%,#fff,transparent),
+    radial-gradient(1px 1px at 55% 15%,#fff,transparent),
+    radial-gradient(1px 1px at 12% 65%,#dbe6ff,transparent);
+    background-repeat:repeat; background-size:320px 320px; opacity:.9;
+    animation:twinkle 6s ease-in-out infinite alternate;}
+  #stars2{background-image:radial-gradient(1.6px 1.6px at 30% 50%,#fff,transparent),
+    radial-gradient(1.6px 1.6px at 80% 25%,#bcd2ff,transparent),
+    radial-gradient(1.6px 1.6px at 60% 75%,#fff,transparent),
+    radial-gradient(1.6px 1.6px at 15% 20%,#fff,transparent);
+    background-repeat:repeat; background-size:520px 520px; opacity:.7;
+    animation:twinkle 9s ease-in-out infinite alternate;}
+  #stars3{background-image:radial-gradient(2.4px 2.4px at 45% 35%,#e8efff,transparent),
+    radial-gradient(2.2px 2.2px at 85% 70%,#fff,transparent);
+    background-repeat:repeat; background-size:760px 760px; opacity:.6;
+    animation:twinkle 12s ease-in-out infinite alternate;}
+  @keyframes twinkle{from{opacity:.35} to{opacity:.95}}
+
+  /* 流れ星（宇宙テーマのみ） */
+  #shooting{position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden;}
+  body.earth #shooting{display:none;}
+  .shoot{
+    position:absolute; width:140px; height:2px; opacity:0;
+    background:linear-gradient(90deg, rgba(255,255,255,0), #fff 60%, #cfe0ff);
+    border-radius:2px; transform:rotate(20deg); transform-origin:left center;
+    filter:drop-shadow(0 0 6px rgba(180,210,255,.9));
+  }
+  .shoot::after{
+    content:""; position:absolute; right:-2px; top:-1.5px;
+    width:5px; height:5px; border-radius:50%; background:#fff;
+    box-shadow:0 0 10px 3px rgba(190,215,255,.95);
+  }
+  @keyframes shoot{
+    0%{opacity:0; transform:rotate(20deg) translateX(0);}
+    8%{opacity:1;}
+    70%{opacity:1;}
+    100%{opacity:0; transform:rotate(20deg) translateX(560px);}
+  }
+
+  /* ===== 地球（自然・草原）テーマ：明るめ ===== */
+  body.earth{
+    --ink:#1c3a28; --sub:#4f7a62; --accent:#2faa5d; --accent2:#3a9fd0;
+    --line:rgba(46,140,90,.20); --panel:rgba(255,255,255,.74); --chip:rgba(60,165,100,.12);
+    --glow:0 0 22px rgba(90,200,130,.40);
+    background:
+      radial-gradient(1100px 620px at 50% -10%, rgba(255,246,190,.85), transparent 55%),
+      radial-gradient(900px 700px at 14% 10%, rgba(150,225,255,.55), transparent 55%),
+      radial-gradient(1100px 800px at 88% 22%, rgba(170,230,150,.50), transparent 55%),
+      linear-gradient(180deg, #bfe9ff 0%, #d8f3e0 42%, #d2f0bf 72%, #bfe6a0 100%);
+    background-attachment:fixed;
+  }
+  /* 草原に舞う光の粒・花粉（星レイヤーを再利用） */
+  body.earth #stars,body.earth #stars2,body.earth #stars3{animation:rise 30s linear infinite;}
+  body.earth #stars{background-image:
+    radial-gradient(2px 2px at 18% 90%,rgba(255,255,255,.9),transparent),
+    radial-gradient(3px 3px at 60% 80%,rgba(255,250,200,.8),transparent),
+    radial-gradient(2px 2px at 40% 70%,rgba(255,255,255,.7),transparent),
+    radial-gradient(2.5px 2.5px at 85% 95%,rgba(210,255,200,.8),transparent);
+    background-size:340px 340px; opacity:.7;}
+  body.earth #stars2{background-image:
+    radial-gradient(4px 4px at 30% 85%,rgba(255,255,255,.6),transparent),
+    radial-gradient(3px 3px at 75% 70%,rgba(255,245,180,.65),transparent);
+    background-size:560px 560px; opacity:.55; animation-duration:38s;}
+  body.earth #stars3{background-image:
+    radial-gradient(6px 6px at 50% 92%,rgba(255,255,255,.45),transparent),
+    radial-gradient(5px 5px at 20% 60%,rgba(220,255,210,.5),transparent);
+    background-size:780px 780px; opacity:.45; animation-duration:48s;}
+  @keyframes rise{from{background-position:0 0} to{background-position:0 -680px}}
+  /* 風景（山・太陽・雲）— 地球モードのみ */
+  #scenery{position:fixed; left:0; right:0; bottom:0; height:60vh; z-index:0;
+    pointer-events:none; display:none;}
+  body.earth #scenery{display:block;}
+  #scenery .sun{
+    position:absolute; top:8vh; left:50%; transform:translateX(-50%);
+    width:90px; height:90px; border-radius:50%;
+    background:radial-gradient(circle, #fff7cf 0%, #ffe680 55%, rgba(255,230,128,0) 72%);
+    filter:drop-shadow(0 0 30px rgba(255,225,120,.8));
+    animation:sunpulse 6s ease-in-out infinite alternate;}
+  @keyframes sunpulse{from{filter:drop-shadow(0 0 24px rgba(255,225,120,.6))}
+    to{filter:drop-shadow(0 0 42px rgba(255,225,120,.95))}}
+  #scenery svg{position:absolute; bottom:0; left:0; width:100%; height:100%;}
+  .cloud{position:absolute; background:rgba(255,255,255,.85); border-radius:50px;
+    filter:blur(1px); opacity:.85;}
+  .cloud::before,.cloud::after{content:""; position:absolute; background:inherit; border-radius:50%;}
+  .cloud.c1{top:12vh; width:120px; height:34px; left:-160px; animation:drift 38s linear infinite;}
+  .cloud.c1::before{width:54px; height:54px; top:-22px; left:22px;}
+  .cloud.c1::after{width:40px; height:40px; top:-14px; left:64px;}
+  .cloud.c2{top:22vh; width:90px; height:26px; left:-160px; animation:drift 52s linear infinite; animation-delay:-12s; opacity:.7;}
+  .cloud.c2::before{width:40px; height:40px; top:-16px; left:16px;}
+  .cloud.c2::after{width:30px; height:30px; top:-10px; left:48px;}
+  @keyframes drift{from{transform:translateX(0)} to{transform:translateX(115vw)}}
+  body.earth header h1{
+    background:linear-gradient(90deg,#1f7a45,#2faa5d 45%,#3a9fd0);
+    -webkit-background-clip:text; background-clip:text;
+    text-shadow:0 1px 14px rgba(90,200,130,.25);
+  }
+  body.earth .switch{background:rgba(255,255,255,.6);}
+  body.earth .card{box-shadow:0 10px 36px rgba(40,90,60,.16), inset 0 1px 0 rgba(255,255,255,.6);}
+  body.earth input,body.earth select{background:rgba(255,255,255,.8); color:var(--ink);}
+  body.earth select option{background:#ffffff; color:#1c3a28;}
+  body.earth .scale span{color:#2f6b4d;}
+  body.earth .preset{color:#2c6b48;}
+  body.earth td.num{color:#3a7a58;}
+  body.earth .result .meta b{color:#1c3a28;}
+  body.earth .seg.active,body.earth .btn{background:linear-gradient(135deg,#2faa5d,#3a9fd0); color:#fff;}
+  body.earth .preset:hover{
+    background:linear-gradient(135deg,rgba(47,170,93,.30),rgba(58,159,208,.30)); color:#1c3a28;
+  }
+  body.earth .result .big{
+    background:radial-gradient(120% 140% at 50% 0%, rgba(120,220,150,.40), rgba(150,225,255,.28) 55%, transparent 80%);
+  }
+  body.earth .result .date{text-shadow:0 1px 12px rgba(90,200,130,.30);}
+  body.earth .result .time{color:#2f8f57;}
+  body.earth tr:hover td{background:rgba(47,170,93,.08);}
+
+  /* ===== 人生時計テーマ（一日の移ろい） ===== */
+  body.life #stars,body.life #stars2,body.life #stars3,body.life #shooting,body.life #scenery{display:none;}
+  body.life{
+    --ink:#fff4ea; --sub:#e7c5a8; --accent:#ff9d5c; --accent2:#ffd17a;
+    --line:rgba(255,180,120,.22); --panel:rgba(60,32,40,.46); --chip:rgba(255,170,110,.12);
+    --glow:0 0 24px rgba(255,157,92,.42);
+    background:
+      radial-gradient(1000px 560px at 50% -6%, rgba(255,236,170,.45), transparent 55%),
+      radial-gradient(900px 700px at 82% 14%, rgba(255,150,110,.30), transparent 55%),
+      radial-gradient(900px 800px at 12% 30%, rgba(120,90,200,.30), transparent 55%),
+      linear-gradient(180deg, #2a1530 0%, #5a2b3a 34%, #9c4a3e 62%, #d98a4a 100%);
+    background-attachment:fixed;
+  }
+  body.life header h1{
+    background:linear-gradient(90deg,#fff,#ffd9a8 45%,#ff9d5c);
+    -webkit-background-clip:text; background-clip:text;
+    text-shadow:0 0 30px rgba(255,157,92,.30);
+  }
+  body.life .seg.active,body.life .btn{background:linear-gradient(135deg,#ff8a4c,#ffb24c);}
+  body.life .preset{color:#ffe0c2;}
+  body.life .preset:hover{
+    background:linear-gradient(135deg,rgba(255,138,76,.35),rgba(255,178,76,.35)); color:#fff;
+  }
+  body.life .scale span{color:#ffd9b8;}
+  body.life td.num{color:#ffd9b8;}
+  body.life .result .meta b{color:#fff0e0;}
+  body.life .result .big{
+    background:radial-gradient(120% 140% at 50% 0%, rgba(255,157,92,.34), rgba(120,60,140,.20) 55%, transparent 80%);
+  }
+  body.life .result .date{text-shadow:0 0 26px rgba(255,157,92,.45);}
+  body.life .result .time{color:#ffd9a8;}
+  body.life tr:hover td{background:rgba(255,157,92,.08);}
+
+  .wrap{position:relative; z-index:1; max-width:920px; margin:0 auto; padding:44px 20px 72px;}
+  header h1{
+    font-size:30px; margin:0 0 6px; letter-spacing:.02em; font-weight:800;
+    background:linear-gradient(90deg,#fff,#bcd0ff 40%,#c08bff);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 0 30px rgba(122,162,255,.25);
+  }
+  header p{margin:0; color:var(--sub); font-size:14px;}
+  .switch{
+    display:inline-flex; gap:4px; margin:18px 0 6px; padding:5px;
+    background:rgba(8,12,30,.55); border:1px solid var(--line); border-radius:14px;
+    backdrop-filter:blur(8px);
+  }
+  .seg{
+    border:none; background:transparent; color:var(--sub); cursor:pointer;
+    font-size:14px; font-weight:700; padding:9px 18px; border-radius:10px;
+    transition:all .18s ease; letter-spacing:.02em;
+  }
+  .seg:hover{color:#dfe7ff;}
+  .seg.active{
+    color:#fff; background:linear-gradient(135deg,#5b7cff,#9a6bff); box-shadow:var(--glow);
+  }
+  .scale{display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 26px; font-size:12px;}
+  .scale span{
+    background:var(--chip); border:1px solid var(--line); padding:5px 12px;
+    border-radius:999px; color:#c5d2ff; backdrop-filter:blur(6px);
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:18px;
+    padding:24px; margin-bottom:22px; backdrop-filter:blur(14px);
+    box-shadow:0 10px 40px rgba(0,0,8,.45), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .card h2{
+    font-size:13px; margin:0 0 18px; color:var(--accent); font-weight:700;
+    letter-spacing:.14em; text-transform:uppercase;
+  }
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;}
+  .field{flex:1; min-width:160px;}
+  label{display:block; font-size:12px; color:var(--sub); margin-bottom:6px; letter-spacing:.03em;}
+  input,select{
+    width:100%; padding:12px; font-size:16px; border:1px solid var(--line);
+    border-radius:11px; background:rgba(8,12,30,.6); color:var(--ink); outline:none;
+  }
+  select option{background:#0a0e22; color:#eaf0ff;}
+  input:focus,select:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(122,162,255,.22), var(--glow);}
+  .btn{
+    border:1px solid rgba(255,255,255,.18); color:#fff; font-size:15px; font-weight:700;
+    padding:12px 24px; border-radius:11px; cursor:pointer; white-space:nowrap;
+    background:linear-gradient(135deg,#5b7cff,#9a6bff); box-shadow:var(--glow);
+    transition:transform .12s ease, box-shadow .2s ease;
+  }
+  .btn:hover{transform:translateY(-1px); box-shadow:0 0 32px rgba(154,107,255,.55);}
+  .result{margin-top:22px; border:1px solid var(--line); border-radius:16px; overflow:hidden; display:none;}
+  .result.show{display:block;}
+  .result .big{
+    padding:28px; text-align:center; position:relative;
+    background:radial-gradient(120% 140% at 50% 0%, rgba(154,107,255,.28), rgba(40,60,140,.18) 55%, transparent 80%);
+  }
+  .result .date{
+    font-size:40px; font-weight:800; letter-spacing:.01em;
+    text-shadow:0 0 28px rgba(122,162,255,.45);
+  }
+  .result .time{
+    font-size:22px; color:#bcd0ff; margin-top:4px; font-variant-numeric:tabular-nums;
+    letter-spacing:.04em;
+  }
+  .result .meta{padding:16px 22px; font-size:14px; color:var(--sub); border-top:1px solid var(--line);}
+  .result .meta b{color:#dfe7ff; font-weight:700;}
+  .presets{display:flex; flex-wrap:wrap; gap:8px;}
+  .preset{
+    background:var(--chip); border:1px solid var(--line); border-radius:999px;
+    padding:8px 14px; font-size:13px; cursor:pointer; color:#cdd9ff;
+    transition:all .15s ease;
+  }
+  .preset:hover{
+    background:linear-gradient(135deg,rgba(91,124,255,.35),rgba(154,107,255,.35));
+    border-color:var(--accent); color:#fff; box-shadow:var(--glow);
+  }
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th,td{text-align:left; padding:10px 8px; border-bottom:1px solid var(--line);}
+  th{color:var(--sub); font-weight:600; font-size:12px; letter-spacing:.04em;}
+  tr:hover td{background:rgba(122,162,255,.06);}
+  td.num{font-variant-numeric:tabular-nums; white-space:nowrap; color:#c5d2ff;}
+  td.cal{color:var(--accent2); white-space:nowrap; font-weight:600;}
+  footer{color:var(--sub); font-size:12px; text-align:center; margin-top:12px; opacity:.8;}
+</style>
+</head>
+<body>
+<div id="stars"></div>
+<div id="stars2"></div>
+<div id="stars3"></div>
+<div id="shooting"></div>
+<div id="scenery" aria-hidden="true">
+  <div class="sun"></div>
+  <div class="cloud c1"></div>
+  <div class="cloud c2"></div>
+  <svg viewBox="0 0 1440 600" preserveAspectRatio="none">
+    <!-- 奥の山並み -->
+    <path d="M0,420 L160,300 L300,400 L460,250 L640,400 L800,290 L980,410 L1160,300 L1320,400 L1440,330 L1440,600 L0,600 Z"
+          fill="#9fc7a6" opacity="0.55"/>
+    <!-- 中景の山（雪冠付き） -->
+    <path d="M0,520 L220,330 L420,500 L640,300 L880,500 L1080,340 L1300,500 L1440,420 L1440,600 L0,600 Z"
+          fill="#6aa97e"/>
+    <path d="M600,330 L640,300 L686,358 L662,346 L648,360 L632,344 L616,356 Z" fill="#f4fbf4" opacity="0.9"/>
+    <path d="M1040,372 L1080,340 L1128,400 L1104,388 L1090,402 L1074,386 L1058,398 Z" fill="#f4fbf4" opacity="0.85"/>
+    <!-- 手前の丘 -->
+    <path d="M0,600 L0,500 Q360,430 720,500 T1440,500 L1440,600 Z" fill="#4f9c63"/>
+    <path d="M0,600 L0,560 Q400,510 760,560 T1440,560 L1440,600 Z" fill="#3d8a52"/>
+  </svg>
+</div>
+<div class="wrap">
+  <header>
+    <h1 id="title">宇宙カレンダー計算機</h1>
+    <p id="lede"></p>
+  </header>
+
+  <div class="switch" id="switch">
+    <button class="seg active" data-mode="cosmic">🌌 宇宙カレンダー</button>
+    <button class="seg" data-mode="earth">🌍 地球カレンダー</button>
+    <button class="seg" data-mode="life">⏰ 人生時計</button>
+    <button class="seg" data-mode="janet">🧠 体感人生時計</button>
+  </div>
+
+  <div class="scale" id="scale"></div>
+
+  <div class="card">
+    <h2 id="cardTitle">実年代 → 宇宙カレンダー日時</h2>
+
+    <!-- カレンダー用入力 -->
+    <div class="row" id="calInputs">
+      <div class="field">
+        <label for="val">何年前（過去）か</label>
+        <input id="val" type="number" inputmode="decimal" value="66" placeholder="例：66">
+      </div>
+      <div class="field" style="flex:0 0 130px;">
+        <label for="unit">単位</label>
+        <select id="unit">
+          <option value="1">年</option>
+          <option value="10000">万年</option>
+          <option value="100000000" selected>億年</option>
+        </select>
+      </div>
+      <button class="btn" id="calc">計算する</button>
+    </div>
+
+    <!-- 人生時計用入力 -->
+    <div class="row" id="lifeInputs" style="display:none;">
+      <div class="field">
+        <label for="age">現在の年齢</label>
+        <input id="age" type="number" inputmode="decimal" value="40" placeholder="例：40">
+      </div>
+      <div class="field" style="flex:0 0 150px;">
+        <label for="lifespan">想定寿命（年）</label>
+        <input id="lifespan" type="number" inputmode="decimal" value="80" placeholder="例：80">
+      </div>
+      <button class="btn" id="calcLife">計算する</button>
+    </div>
+
+    <div class="result" id="result">
+      <div class="big">
+        <div class="date" id="rDate">—</div>
+        <div class="time" id="rTime">—</div>
+      </div>
+      <div class="meta">
+        <div id="metaLine1">入力：<b id="rInput">—</b> 前</div>
+        <div id="metaLine2"><span id="elapsedLabel">ビッグバン</span>からの経過：<b id="rElapsed">—</b></div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <label>主要イベントを選択</label>
+      <div class="presets" id="presets"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>主要イベント年表</h2>
+    <table>
+      <thead>
+        <tr><th>イベント</th><th id="thMid">実年代（前）</th><th id="thCal">宇宙カレンダー</th></tr>
+      </thead>
+      <tbody id="timeline"></tbody>
+    </table>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const SEC_PER_YEAR = 365*24*3600;   // 圧縮後1年の秒数（非閏年）
+const DAYS = [31,28,31,30,31,30,31,31,30,31,30,31];
+const MON = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+
+// 2つのカレンダー設定
+const MODES = {
+  cosmic: {
+    name:"宇宙カレンダー",
+    total: 13.8e9,                 // 宇宙の年齢
+    cardLabel:"実年代 → 宇宙カレンダー日時",
+    lede:'宇宙の歴史 <b>138億年</b> を1年（365日）に圧縮。ビッグバン＝1月1日 0:00、現在＝12月31日 24:00。',
+    origin:"ビッグバン",
+    foot:"宇宙年齢＝138億年で計算。1年＝非閏年365日として換算。",
+    scale:["1日 ≈ 3,781万年","1時間 ≈ 158万年","1分 ≈ 2.6万年","1秒 ≈ 438年"],
+    initial: 6.6e7, initialLabel:"恐竜の絶滅",
+    events:[
+      ["ビッグバン", 13.8e9],
+      ["最初の銀河", 13.0e9],
+      ["天の川銀河の形成", 11.0e9],
+      ["太陽系の誕生", 4.57e9],
+      ["地球の誕生", 4.54e9],
+      ["地球最初の生命", 3.8e9],
+      ["光合成（シアノバクテリア）", 2.5e9],
+      ["多細胞生物の出現", 1.0e9],
+      ["カンブリア爆発", 5.4e8],
+      ["陸上植物", 4.5e8],
+      ["恐竜の出現", 2.3e8],
+      ["哺乳類の出現", 2.0e8],
+      ["恐竜の絶滅", 6.6e7],
+      ["人類（ホモ属）の出現", 2.5e6],
+      ["ホモ・サピエンス", 3.0e5],
+      ["農耕の開始", 1.1e4],
+      ["西暦元年", 2025]
+    ]
+  },
+  earth: {
+    name:"地球カレンダー",
+    total: 4.54e9,                 // 地球の年齢
+    cardLabel:"実年代 → 地球カレンダー日時",
+    lede:'地球の歴史 <b>45.4億年</b> を1年（365日）に圧縮。地球誕生＝1月1日 0:00、現在＝12月31日 24:00。',
+    origin:"地球誕生",
+    foot:"地球年齢＝45.4億年で計算。1年＝非閏年365日として換算。",
+    scale:["1日 ≈ 1,244万年","1時間 ≈ 51.8万年","1分 ≈ 8,634年","1秒 ≈ 144年"],
+    initial: 6.6e7, initialLabel:"恐竜の絶滅",
+    events:[
+      ["地球の誕生", 4.54e9],
+      ["海の形成", 4.4e9],
+      ["最初の生命", 3.8e9],
+      ["光合成（シアノバクテリア）", 2.7e9],
+      ["大酸化イベント", 2.4e9],
+      ["真核生物の出現", 1.6e9],
+      ["多細胞生物の出現", 8.0e8],
+      ["カンブリア爆発", 5.41e8],
+      ["生物の上陸（植物）", 4.7e8],
+      ["陸上動物の出現", 3.75e8],
+      ["恐竜の出現", 2.3e8],
+      ["哺乳類の出現", 2.0e8],
+      ["恐竜の絶滅", 6.6e7],
+      ["人類（ホモ属）の出現", 2.5e6],
+      ["ホモ・サピエンス", 3.0e5],
+      ["農耕の開始", 1.1e4],
+      ["西暦元年", 2025]
+    ]
+  },
+  life: {
+    name:"人生時計",
+    kind:"life",                   // カレンダー型ではなく一日（24時間）型
+    cardLabel:"年齢 → 人生時計の時刻",
+    lede:'人生を1日（24時間）に圧縮。誕生＝0:00、寿命＝24:00。年齢を入れると「いまが人生の何時か」がわかります。',
+    origin:"誕生",
+    foot:"年齢 ÷ 想定寿命 × 24時間 で換算。寿命は入力値で変わります。",
+    // 想定寿命80年のときの目安（render時に寿命に応じて再計算）
+    defaultLifespan: 80,
+    // [イベント名, 年齢]
+    events:[
+      ["誕生", 0],
+      ["小学校入学", 6],
+      ["中学卒業", 15],
+      ["成人", 18],
+      ["大学卒業", 22],
+      ["就職", 23],
+      ["30代", 30],
+      ["40代", 40],
+      ["50代", 50],
+      ["定年（65歳）", 65],
+      ["後期高齢（75歳）", 75],
+      ["寿命", 80]
+    ]
+  },
+  janet: {
+    name:"体感人生時計",
+    kind:"janet",                  // ジャネーの法則：体感時間は年齢に反比例
+    cardLabel:"年齢 → 体感の時刻（ジャネーの法則）",
+    lede:'ジャネーの法則：体感する時間の長さは年齢に反比例。物心がつく頃を起点に、20歳を折り返し（12:00）として体感時間を1日に圧縮します。若い頃ほど時間がゆっくり進み、歳を重ねるほど加速します。',
+    origin:"体感ゼロ",
+    foot:"体感の経過 ＝ (ln年齢 − ln起点) ÷ (ln寿命 − ln起点)。起点（物心）＝20²÷寿命歳、20歳＝12:00。寿命は入力値で変わります。",
+    defaultLifespan: 80,
+    events:[
+      ["誕生", 0],
+      ["小学校入学", 6],
+      ["中学卒業", 15],
+      ["成人", 18],
+      ["大学卒業", 22],
+      ["就職", 23],
+      ["30代", 30],
+      ["40代", 40],
+      ["50代", 50],
+      ["定年（65歳）", 65],
+      ["後期高齢（75歳）", 75],
+      ["寿命", 80]
+    ]
+  }
+};
+
+let MODE = MODES.cosmic;
+
+// 何年前 → カレンダー日時
+function toCal(yearsAgo){
+  let elapsed = MODE.total - yearsAgo;
+  if (elapsed < 0) elapsed = 0;
+  let frac = elapsed / MODE.total;            // 0〜1
+  let totalSec = frac * SEC_PER_YEAR;
+  if (frac >= 1) return {month:12, day:31, h:24, m:0, s:0, end:true};
+  let dayOfYear = Math.floor(totalSec / 86400);
+  let rem = totalSec - dayOfYear*86400;
+  let h = Math.floor(rem/3600);
+  let m = Math.floor((rem%3600)/60);
+  let s = rem%60;
+  let mo=0, d=dayOfYear;
+  while (d >= DAYS[mo]){ d -= DAYS[mo]; mo++; }
+  return {month:mo+1, day:d+1, h, m, s, end:false};
+}
+
+function pad(n){return String(n).padStart(2,'0');}
+function padSec(n){return n.toFixed(6).padStart(9,'0');}  // 例: "06.123456"
+
+function fmtYears(y){
+  if (y >= 1e8) return (y/1e8).toLocaleString('ja-JP',{maximumFractionDigits:2})+"億年";
+  if (y >= 1e4) return (y/1e4).toLocaleString('ja-JP',{maximumFractionDigits:2})+"万年";
+  return Math.round(y).toLocaleString('ja-JP')+"年";
+}
+
+function show(yearsAgo, label){
+  const c = toCal(yearsAgo);
+  document.getElementById('result').classList.add('show');
+  document.getElementById('rDate').textContent = `${MON[c.month-1]}${c.day}日`;
+  document.getElementById('rTime').textContent =
+    c.end ? "24:00:00.000000" : `${pad(c.h)}:${pad(c.m)}:${padSec(c.s)}`;
+  document.getElementById('rInput').textContent =
+    (label? label+"（":"") + fmtYears(yearsAgo) + (label? "）":"");
+  const elapsed = Math.max(0, MODE.total - yearsAgo);
+  document.getElementById('rElapsed').textContent =
+    fmtYears(elapsed) + `（全体の ${(elapsed/MODE.total*100).toFixed(2)}%）`;
+}
+
+function fillInput(y){
+  const sel=document.getElementById('unit'), inp=document.getElementById('val');
+  if (y>=1e8){sel.value="100000000"; inp.value=(y/1e8);}
+  else if (y>=1e4){sel.value="10000"; inp.value=(y/1e4);}
+  else {sel.value="1"; inp.value=y;}
+}
+
+// ===== 人生時計用ロジック =====
+// 現在の想定寿命（入力欄から取得）
+function getLifespan(){
+  const v = parseFloat(document.getElementById('lifespan').value);
+  return (isNaN(v) || v <= 0) ? MODE.defaultLifespan : v;
+}
+// 年齢 → 一日の中の時刻（24時間制）
+function ageToTime(age, lifespan){
+  let ratio;
+  if (MODE.kind === "janet"){
+    // ジャネーの法則：累積体感時間 ∝ ln(年齢)
+    // 20歳を折り返し(12:00)にするため、起点 a0 = 20^2 / 寿命（物心がつく頃）
+    const M = 20;                       // 体感の折り返し年齢
+    const a0 = (M*M) / lifespan;        // 体感を数え始める年齢
+    if (age <= a0){ ratio = 0; }        // 物心つく前はカウントしない
+    else { ratio = (Math.log(age) - Math.log(a0)) / (Math.log(lifespan) - Math.log(a0)); }
+  } else {
+    ratio = age / lifespan;       // 実時間（線形）
+  }
+  if (ratio < 0) ratio = 0;
+  if (ratio >= 1) return {h:24, m:0, s:0, ratio:1, end:true};
+  let totalSec = ratio * 86400;          // 1日＝86400秒
+  let h = Math.floor(totalSec/3600);
+  let m = Math.floor((totalSec%3600)/60);
+  let s = totalSec%60;
+  return {h, m, s, ratio, end:false};
+}
+// 人生のフェーズ（時刻帯）
+function phaseLabel(h){
+  if (h < 6)  return "夜明け前 — 幼少・基礎づくり";
+  if (h < 12) return "午前 — 成長・挑戦の時間";
+  if (h < 17) return "昼下がり — 充実・円熟の時間";
+  if (h < 21) return "夕暮れ — 収穫・伝える時間";
+  return "夜 — 静寂・振り返りの時間";
+}
+// 寿命に応じた換算スケール
+function lifeScale(lifespan){
+  if (MODE.kind === "janet"){
+    // 起点 a0 = 20^2/寿命。各時刻に相当する年齢 ＝ a0 ×（寿命/a0）^(時刻/24)
+    const a0 = (20*20) / lifespan;
+    const at = f => Math.round(a0 * Math.pow(lifespan/a0, f));
+    return [
+      `起点（物心）≈ ${a0.toFixed(1)}歳`,
+      `12:00（体感の半分）= 20歳`,
+      `18:00 ≈ ${at(0.75)}歳`
+    ];
+  }
+  const perHour = lifespan/24;            // 1時間あたりの年数
+  const perMin  = lifespan*365/(24*60);   // 1分あたりの日数
+  const perSec  = lifespan*365*24/86400;  // 1秒あたりの時間数
+  return [
+    `1時間 ≈ ${perHour.toFixed(1)}歳`,
+    `1分 ≈ ${perMin.toFixed(1)}日`,
+    `1秒 ≈ ${perSec.toFixed(1)}時間`
+  ];
+}
+// 人生時計の結果表示
+function showLife(age, label){
+  const lifespan = getLifespan();
+  const t = ageToTime(age, lifespan);
+  document.getElementById('result').classList.add('show');
+  document.getElementById('rDate').textContent =
+    t.end ? "24:00" : `${pad(t.h)}:${pad(t.m)}`;
+  document.getElementById('rTime').textContent =
+    t.end ? "寿命 — 一日のおわり" : phaseLabel(t.h);
+  // 既存のID（rInput / elapsedLabel / rElapsed）を保持して書き換える
+  document.getElementById('metaLine1').innerHTML =
+    `入力：<b id="rInput">${(label?label+"（":"")}${age}歳${(label?"）":"")}</b>（想定寿命 ${lifespan}年）`;
+  const remain = Math.max(0, (1 - t.ratio) * 24);
+  const elapsedName = (MODE.kind === "janet") ? "体感の経過" : "誕生からの経過";
+  document.getElementById('metaLine2').innerHTML =
+    `<span id="elapsedLabel">${elapsedName}</span>：<b id="rElapsed">${(t.ratio*100).toFixed(1)}%（人生時計の残り ${remain.toFixed(1)}時間）</b>`;
+}
+
+// モード描画
+function render(){
+  const isLife = (MODE.kind === "life" || MODE.kind === "janet");
+  document.body.classList.toggle('earth', MODE === MODES.earth);
+  document.body.classList.toggle('life', isLife);
+  document.getElementById('title').textContent = MODE.name + (isLife ? "" : "計算機");
+  document.getElementById('lede').innerHTML = MODE.lede;
+  document.getElementById('cardTitle').textContent = MODE.cardLabel;
+  document.getElementById('elapsedLabel').textContent = MODE.origin;
+  document.getElementById('thCal').textContent = MODE.name;
+  document.getElementById('foot').textContent = MODE.foot;
+
+  // 入力欄の切替
+  document.getElementById('calInputs').style.display  = isLife ? "none" : "flex";
+  document.getElementById('lifeInputs').style.display = isLife ? "flex" : "none";
+  document.getElementById('thMid').textContent = isLife ? "年齢" : "実年代（前）";
+
+  // スケール
+  const scaleArr = isLife ? lifeScale(getLifespan()) : MODE.scale;
+  document.getElementById('scale').innerHTML =
+    scaleArr.map(s=>`<span>${s}</span>`).join('');
+
+  // プリセット
+  const presetWrap = document.getElementById('presets');
+  presetWrap.innerHTML='';
+  MODE.events.forEach(([name, val])=>{
+    const b = document.createElement('button');
+    b.className='preset'; b.textContent=name;
+    b.addEventListener('click', ()=>{
+      if (isLife){ document.getElementById('age').value = val; showLife(val, name); }
+      else { show(val, name); fillInput(val); }
+      document.getElementById('result').scrollIntoView({behavior:'smooth',block:'nearest'});
+    });
+    presetWrap.appendChild(b);
+  });
+
+  // 年表
+  const tb = document.getElementById('timeline');
+  tb.innerHTML='';
+  if (isLife){
+    const lifespan = getLifespan();
+    MODE.events.forEach(([name, age])=>{
+      const t = ageToTime(age, lifespan);
+      const time = t.end ? "24:00" : `${pad(t.h)}:${pad(t.m)}`;
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td>${name}</td><td class="num">${age}歳</td>`+
+        `<td class="cal">${time}</td>`;
+      tb.appendChild(tr);
+    });
+  } else {
+    MODE.events.forEach(([name, y])=>{
+      const c = toCal(y);
+      let t;
+      if (c.end) t = "24:00:00.000";
+      else if (c.month===12 && c.day===31) t = `${pad(c.h)}:${pad(c.m)}:${c.s.toFixed(3).padStart(6,'0')}`;  // 大晦日は秒数も（3桁）
+      else t = `${pad(c.h)}:${pad(c.m)}`;
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td>${name}</td><td class="num">${fmtYears(y)}</td>`+
+        `<td class="cal">${MON[c.month-1]}${c.day}日 ${t}</td>`;
+      tb.appendChild(tr);
+    });
+  }
+
+  // 初期表示
+  if (isLife){
+    const a = parseFloat(document.getElementById('age').value);
+    showLife(isNaN(a)?40:a);
+  } else {
+    show(MODE.initial, MODE.initialLabel);
+    fillInput(MODE.initial);
+  }
+}
+
+// 計算ボタン
+document.getElementById('calc').addEventListener('click', ()=>{
+  const v = parseFloat(document.getElementById('val').value);
+  const u = parseFloat(document.getElementById('unit').value);
+  if (isNaN(v) || v < 0){ alert("0以上の数値を入力してください"); return; }
+  let years = v*u;
+  if (years > MODE.total){ alert(MODE.origin+"より前の年代は入力できません（最大 "+fmtYears(MODE.total)+"）"); return; }
+  show(years);
+});
+
+// 人生時計の計算ボタン
+document.getElementById('calcLife').addEventListener('click', ()=>{
+  const age = parseFloat(document.getElementById('age').value);
+  const lifespan = getLifespan();
+  if (isNaN(age) || age < 0){ alert("0以上の年齢を入力してください"); return; }
+  if (age > lifespan){ alert("年齢が想定寿命を超えています（最大 "+lifespan+"歳）"); return; }
+  render();          // スケール・年表も寿命に合わせて再計算
+  showLife(age);
+});
+
+// モード切替
+document.querySelectorAll('.seg').forEach(seg=>{
+  seg.addEventListener('click', ()=>{
+    document.querySelectorAll('.seg').forEach(s=>s.classList.remove('active'));
+    seg.classList.add('active');
+    MODE = MODES[seg.dataset.mode];
+    render();
+  });
+});
+
+render();
+
+// 流れ星を一定間隔でランダムに飛ばす
+function launchShootingStar(){
+  if (MODE !== MODES.cosmic) return;          // 宇宙テーマのみ
+  const sky = document.getElementById('shooting');
+  const s = document.createElement('div');
+  s.className = 'shoot';
+  s.style.left = (Math.random()*60) + 'vw';   // 画面左～中央あたりから
+  s.style.top  = (Math.random()*45) + 'vh';   // 上半分から
+  const dur = 1.0 + Math.random()*1.2;        // 1.0〜2.2秒
+  s.style.animation = `shoot ${dur}s ease-in forwards`;
+  sky.appendChild(s);
+  setTimeout(()=>s.remove(), dur*1000 + 100);
+}
+function scheduleStar(){
+  launchShootingStar();
+  setTimeout(scheduleStar, 1800 + Math.random()*3500);  // 1.8〜5.3秒間隔
+}
+scheduleStar();
+</script>
+</body>
+</html>
